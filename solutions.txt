@@ -1,6 +1,8 @@
 package com.app;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.IOUtils;
@@ -8,32 +10,43 @@ import org.apache.commons.io.IOUtils;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.S3Object;
 
-public class S3Handler implements RequestHandler<S3Event, String> {
+public class CSVApp implements RequestHandler<S3Event, String> {
 
 	private static final String REGION = "us-east-1";
 	AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.fromName(REGION))
 			.withCredentials(new DefaultAWSCredentialsProviderChain()).build();
 
 	@Override
-	public String handleRequest(S3Event input, Context context) {
+	public Boolean handleRequest(S3Event input, Context context) {
+		LambdaLogger logger= context.getLogger();
+		if(input.getRecords().isEmpty()) {
+			logger.log("No Data Found");
+			return false;
+		}
 
+		// process the record
 		String bucketName = input.getRecords().get(0).getS3().getBucket().getName();
 		String fileName = input.getRecords().get(0).getS3().getObject().getKey();
-		context.getLogger().log("Bucket Name " + bucketName);
-		context.getLogger().log("File Name " + fileName);
-		try {
-			InputStream inputStream = s3Client.getObject(bucketName, fileName).getObjectContent();
-			String content = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-			context.getLogger().log("File Content " + content);
-		} catch (Exception e) {
-
-		}
-		return "Successfull file is read";
+		
+		S3Object s3Object= s3Client.getObject(bucketName,fileName);
+		S3Object inputStream=s3Object.getObjectContent();
+	try {
+		BufferedReader bufferedReader= new BufferedReader(new InputStreamReader(inputStream,StandardCharsets.UTF_8)));
+		br.lines().skip(1).forEach(line -> logger.log(line + "\n"));
+	}catch (Exception e) {
+		logger.log("Something went wrong");
+		return false;
 	}
+	return true;
+	
+	}
+	
 
 }
