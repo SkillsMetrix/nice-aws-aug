@@ -5,6 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.swing.text.AbstractDocument.Content;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
+import com.amazonaws.services.lambda.runtime.events.S3Event;
+import com.amazonaws.services.lambda.runtime.events.models.s3.S3EventNotification;
+  
 public class LambdaHandler {
 	public String handler() {
 		return "welcome to First Lambda Handler";
@@ -23,6 +30,17 @@ public class LambdaHandler {
 	public List<Employee> searchEmployee(List<Employee> list){
 		return list.stream().filter(emp -> emp.getEmpName().startsWith("A"))
 				.collect(Collectors.toList());
+	}
+	public String eventHandler(S3Event event, Context content) {
+		String buckerName="";
+		LambdaLogger logger= content.getLogger();
+		logger.log("Inside Lambda");
+		if(!event.getRecords().isEmpty()) {
+			S3EventNotification.S3Entity s3= event.getRecords().get(0).getS3();
+			buckerName=s3.getBucket().getName();
+			logger.log("Object Key "+ s3.getObject().getKey() );
+		}
+		return buckerName;
 	}
 
 }
