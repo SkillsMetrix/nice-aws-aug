@@ -1,0 +1,28 @@
+package com.app;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+public class LambdaHandler {
+	public String handler() {
+		return "welcome to First Lambda Handler";
+	}
+	public String handler2(String name) {
+		return "welcome " + name;
+	}
+	public int handleInt(List<Integer> list) {
+		return list.stream().mapToInt(Integer :: intValue).sum();
+	}
+	public Map<String, Integer> handleMap(Map<String, Integer> inputMap){
+		final Map<String, Integer> updateSalary= new HashMap<String, Integer>();
+		inputMap.forEach((k,v)-> updateSalary.put(k, v+5000));
+		return updateSalary;
+		}
+	public List<Employee> searchEmployee(List<Employee> list){
+		return list.stream().filter(emp -> emp.getEmpName().startsWith("A"))
+				.collect(Collectors.toList());
+	}
+
+}
