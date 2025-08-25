@@ -1,46 +1,44 @@
 package com.app;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import javax.swing.text.AbstractDocument.Content;
+import java.util.Collection;
+import java.util.Collections;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
-import com.amazonaws.services.lambda.runtime.events.S3Event;
-import com.amazonaws.services.lambda.runtime.events.models.s3.S3EventNotification;
-  
-public class LambdaHandler {
-	public String handler() {
-		return "welcome to First Lambda Handler";
-	}
-	public String handler2(String name) {
-		return "welcome " + name;
-	}
-	public int handleInt(List<Integer> list) {
-		return list.stream().mapToInt(Integer :: intValue).sum();
-	}
-	public Map<String, Integer> handleMap(Map<String, Integer> inputMap){
-		final Map<String, Integer> updateSalary= new HashMap<String, Integer>();
-		inputMap.forEach((k,v)-> updateSalary.put(k, v+5000));
-		return updateSalary;
-		}
-	public List<Employee> searchEmployee(List<Employee> list){
-		return list.stream().filter(emp -> emp.getEmpName().startsWith("A"))
-				.collect(Collectors.toList());
-	}
-	public String eventHandler(S3Event event, Context content) {
-		String buckerName="";
-		LambdaLogger logger= content.getLogger();
-		logger.log("Inside Lambda");
-		if(!event.getRecords().isEmpty()) {
-			S3EventNotification.S3Entity s3= event.getRecords().get(0).getS3();
-			buckerName=s3.getBucket().getName();
-			logger.log("Object Key "+ s3.getObject().getKey() );
-		}
-		return buckerName;
-	}
+import com.amazonaws.services.lambda.runtime.RequestHandler;
 
+public class MainApp implements RequestHandler<Object, GatewayResponse>{
+
+	@Override
+	public GatewayResponse handleRequest(Object input, Context context) {
+		String message= "Welcome to Nice Pune";
+		System.out.println(message);
+		GatewayResponse response= new GatewayResponse(message, 200, Collections.singletonMap
+				("POWERED-BY", "Tech Platforms"));
+		return response;
+	}
+	
+	
+
+}
+
+
+------
+
+
+package com.app;
+
+import java.util.Map;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+public class GatewayResponse {
+private String body;
+private Integer statusCode;
+private Map<String, String> headers;
 }
