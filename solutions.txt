@@ -1,49 +1,5 @@
 package com.tech;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@ToString
-public class Order {
-	private int id;
-	private String name;
-	private double price;
-	private int quantity;
-
-}
----
-
-package com.tech;
-
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.springframework.stereotype.Repository;
-
-@Repository
-public class OderDao {
-	
-	public List<Order> buildOrders(){
-		
-		return Stream.of(
-				new Order(101,"Watches",23456.34,5),
-				new Order(102,"Jeans",2456.22,5),
-				new Order(101,"belts",234.34,9)
-				).collect(Collectors.toList());
-	}
-
-}
-
-----
-
-package com.tech;
-
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -69,15 +25,26 @@ public class SpringCloudApp {
 		return ()-> oderDao.buildOrders();
 	}
 	@Bean
-	public Function<APIGatewayProxyRequestEvent, List<Order>> findOrderByName(){
+	public Function< String,List<Order>> findOrderByName(){
 		
-		return (requestEvent)-> oderDao.buildOrders()
-				.stream()
-				.filter(order -> order.getName().equals(requestEvent.getQueryStringParameters().get("orderName")))
-				.collect(Collectors.toList());
+		return (input)-> oderDao.buildOrders()
+				.stream().filter(order -> order.getName().equals(input)).collect(Collectors.toList());
 	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(SpringCloudApp.class, args);
 	}
+}
+----
+
+
+package com.tech;
+
+import org.springframework.cloud.function.adapter.aws.SpringBootRequestHandler;
+
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+
+public class AwsLambdaHandler extends SpringBootRequestHandler<String, Object>{
+
 }
