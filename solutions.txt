@@ -1,53 +1,53 @@
-package com.app;
+package com.tech;
 
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
-import org.apache.commons.io.IOUtils;
+import org.springframework.stereotype.Component;
 
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.lambda.runtime.events.S3Event;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-
-public class CSVApp implements RequestHandler<S3Event, Boolean> {
-
-	private static final String REGION = "us-east-1";
-	AmazonS3 s3Client = AmazonS3ClientBuilder.standard().withRegion(Regions.fromName(REGION))
-			.withCredentials(new DefaultAWSCredentialsProviderChain()).build();
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+@Component
+public class Welcome implements Function<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>{
 
 	@Override
-	public Boolean handleRequest(S3Event input, Context context) {
-		LambdaLogger logger= context.getLogger();
-		if(input.getRecords().isEmpty()) {
-			logger.log("No Data Found");
-			return false;
-		}
-
-		// process the record
-		String bucketName = input.getRecords().get(0).getS3().getBucket().getName();
-		String fileName = input.getRecords().get(0).getS3().getObject().getKey();
-		
-		S3Object s3Object= s3Client.getObject(bucketName,fileName);
-		S3ObjectInputStream inputStream=s3Object.getObjectContent();
-	try {
-		BufferedReader br= new BufferedReader(new InputStreamReader(inputStream,StandardCharsets.UTF_8));
-		br.lines().skip(1).forEach(line -> logger.log(line + "\n"));
-	}catch (Exception e) {
-		logger.log("Something went wrong");
-		return false;
+	public APIGatewayProxyResponseEvent apply(APIGatewayProxyRequestEvent input) {
+		APIGatewayProxyResponseEvent responseEvent= new APIGatewayProxyResponseEvent();
+		responseEvent.setStatusCode(200);
+		responseEvent.setBody("Hello ,welcome top spring Lambda "+ input.getBody());
+		return responseEvent;
 	}
-	return true;
-	
-	}
-	
 
+}
+
+-----
+
+package com.tech;
+
+import org.springframework.cloud.function.adapter.aws.SpringBootRequestHandler;
+
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+
+public class AwsLambdaHandler extends SpringBootRequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>{
+
+}
+
+
+-----
+
+
+package com.tech;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Component;
+
+@SpringBootApplication
+@ComponentScan("com")
+public class SpringCloudApp {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SpringCloudApp.class, args);
+	}
 }
