@@ -1,51 +1,81 @@
 package com.tech;
 
-import java.util.function.Function;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-import org.springframework.stereotype.Component;
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+public class Order {
+	private int id;
+	private String name;
+	private double price;
+	private int quantity;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-@Component
-public class Welcome implements Function<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>{
+}
+---
 
-	@Override
-	public APIGatewayProxyResponseEvent apply(APIGatewayProxyRequestEvent input) {
-		APIGatewayProxyResponseEvent responseEvent= new APIGatewayProxyResponseEvent();
-		responseEvent.setStatusCode(200);
-		responseEvent.setBody("Hello ,welcome top spring Lambda "+ input.getBody());
-		return responseEvent;
+package com.tech;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class OderDao {
+	
+	public List<Order> buildOrders(){
+		
+		return Stream.of(
+				new Order(101,"Watches",23456.34,5),
+				new Order(102,"Jeans",2456.22,5),
+				new Order(101,"belts",234.34,9)
+				).collect(Collectors.toList());
 	}
 
 }
 
------
+----
 
 package com.tech;
 
-import org.springframework.cloud.function.adapter.aws.SpringBootRequestHandler;
+import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Component;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
-public class AwsLambdaHandler extends SpringBootRequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent>{
-
-}
-
-
------
-
-
-package com.tech;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.stereotype.Component;
-
 @SpringBootApplication
 @ComponentScan("com")
 public class SpringCloudApp {
+	@Autowired
+	private OderDao oderDao;	
+	@Bean
+	public Supplier<List<Order>> orders(){
+		return ()-> oderDao.buildOrders();
+	}
+	@Bean
+	public Function<APIGatewayProxyRequestEvent, List<Order>> findOrderByName(){
+		
+		return (requestEvent)-> oderDao.buildOrders()
+				.stream()
+				.filter(order -> order.getName().equals(requestEvent.getQueryStringParameters().get("orderName")))
+				.collect(Collectors.toList());
+	}
 
 	public static void main(String[] args) {
 		SpringApplication.run(SpringCloudApp.class, args);
