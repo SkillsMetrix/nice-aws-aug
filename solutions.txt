@@ -1,50 +1,124 @@
-package com.tech;
+package org.example;
 
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.stereotype.Component;
-
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
 @SpringBootApplication
-@ComponentScan("com")
-public class SpringCloudApp {
-	@Autowired
-	private OderDao oderDao;	
-	@Bean
-	public Supplier<List<Order>> orders(){
-		return ()-> oderDao.buildOrders();
-	}
-	@Bean
-	public Function< String,List<Order>> findOrderByName(){
-		
-		return (input)-> oderDao.buildOrders()
-				.stream().filter(order -> order.getName().equals(input)).collect(Collectors.toList());
+@ComponentScan("org")
+public class Application {
+	public static void main(String[] args) {
+		SpringApplication.run(Application.class, args);
 	}
 
-	public static void main(String[] args) {
-		SpringApplication.run(SpringCloudApp.class, args);
+}
+
+
+
+package org.example;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import com.amazonaws.serverless.proxy.model.AwsProxyRequest;
+import com.amazonaws.serverless.proxy.model.AwsProxyResponse;
+import com.amazonaws.serverless.proxy.spring.SpringBootLambdaContainerHandler;
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+ 
+public class StreamHandler implements RequestStreamHandler{
+	private static SpringBootLambdaContainerHandler<AwsProxyRequest, AwsProxyResponse> handler;
+	
+	static {
+		try {
+			handler= SpringBootLambdaContainerHandler.getAwsProxyHandler(Application.class);
+			
+		}catch (Exception e) {
+			 
+		}
+	}
+
+	@Override
+	public void handleRequest(InputStream input, OutputStream output, Context context) throws IOException {
+		handler.proxyStream(input, output, context);
+		
+	}
+
+}
+
+---
+
+package org.example.controller;
+
+import java.util.List;
+
+import org.example.dto.Course;
+import org.example.service.CourseService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/courses")
+public class CourseController {
+
+	@Autowired
+	private CourseService service;
+
+	@PostMapping(produces = "application/json", consumes = "application/json")
+	public ResponseEntity<Course> addCourse(@RequestBody Course course) {
+		service.addCourse(course);
+		return new ResponseEntity<>(course, HttpStatus.CREATED);
+
+	}
+
+	@GetMapping(produces = "application/json")
+	public ResponseEntity<List<Course>> loadAllCourses() {
+		List<Course> courses = service.getAllCourses();
+		return new ResponseEntity<>(courses, HttpStatus.OK);
 	}
 }
+
+
 ----
 
+package org.example.service;
 
-package com.tech;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
-import org.springframework.cloud.function.adapter.aws.SpringBootRequestHandler;
+import org.example.dto.Course;
+import org.springframework.stereotype.Service;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+@Service
+public class CourseService {
+	private final List<Course> courses= new ArrayList<Course>();
+	public void addCourse(Course course) {
+		courses.add(course);
+	}
+	public List<Course> getAllCourses(){
+		return courses;
+	}
+	public Optional<Course> getCourseById(int id){
+		return courses.stream().filter(course -> course.getId() == id).findFirst();
+	}
+	public boolean updateCourse(int id, Course course) {
+		return getCourseById(id).map(exist -> {
+			courses.remove(exist);
+			courses.add(course);
+			return true;
+			
+		}).orElse(false);
+	}
 
-public class AwsLambdaHandler extends SpringBootRequestHandler<String, Object>{
-
+	public boolean deleteCourse(int id) {
+		return courses.removeIf(course -> course.getId() == id);
+	}
 }
